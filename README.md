@@ -15,6 +15,12 @@ An intelligent, multilingual customer support automation workflow built with **n
 
 ---
 
+## 🖼️ Workflow Diagram
+
+![AI Customer Support Agent Workflow](./workflow-diagram.svg)
+
+---
+
 ## 🗂️ Workflow Overview
 
 ```
