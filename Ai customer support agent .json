@@ -12,10 +12,7 @@
       "name": "Customer Message (Webhook)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "webhookId": "support-agent-webhook"
     },
     {
@@ -30,10 +27,7 @@
       "name": "AI Support Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 1.7,
-      "position": [
-        320,
-        0
-      ]
+      "position": [320, 0]
     },
     {
       "parameters": {
@@ -50,10 +44,7 @@
       "name": "OpenAI Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
-      "position": [
-        240,
-        240
-      ],
+      "position": [240, 240],
       "credentials": {
         "openAiApi": {
           "id": "REPLACE_ME",
@@ -71,10 +62,7 @@
       "name": "Conversation Memory",
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
-      "position": [
-        420,
-        240
-      ]
+      "position": [420, 240]
     },
     {
       "parameters": {
@@ -91,6 +79,18 @@
               "name": "reply",
               "value": "={{ $json.output.replace('[HANDOFF]', '').trim() }}",
               "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "sessionId",
+              "value": "={{ $('Customer Message (Webhook)').item.json.body.sessionId }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "originalMessage",
+              "value": "={{ $('Customer Message (Webhook)').item.json.body.message }}",
+              "type": "string"
             }
           ]
         },
@@ -100,10 +100,7 @@
       "name": "Check Handoff",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        640,
-        0
-      ]
+      "position": [640, 0]
     },
     {
       "parameters": {
@@ -115,25 +112,68 @@
       "name": "Send Reply",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [
-        860,
-        0
-      ]
+      "position": [860, 0]
     },
     {
       "parameters": {
-        "content": "## AI Customer Support Agent\n\n**Setup:**\n1. Add your OpenAI credential in the OpenAI Chat Model node.\n2. Edit the System Message in the 'AI Support Agent' node with your company details.\n3. Activate the workflow.\n\n**Test (curl):**\ncurl -X POST <WEBHOOK_URL> -H 'Content-Type: application/json' -d '{\"sessionId\":\"u1\",\"message\":\"How long does delivery take?\"}'\n\n**Next step:** Replace the Webhook with a WhatsApp or Telegram trigger.",
-        "height": 300,
-        "width": 420
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.needsHuman }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Needs Human?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1080, 0]
+    },
+    {
+      "parameters": {
+        "sendTo": "support-team@demostore.com",
+        "subject": "🚨 Customer Handoff Required — Session {{ $json.sessionId }}",
+        "emailType": "html",
+        "message": "<h2>Customer Needs Human Support</h2><p><strong>Session ID:</strong> {{ $json.sessionId }}</p><p><strong>Customer Message:</strong></p><blockquote>{{ $json.originalMessage }}</blockquote><p><strong>AI Reply Sent:</strong></p><blockquote>{{ $json.reply }}</blockquote><p>Please follow up with this customer as soon as possible.</p>",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "Alert Team (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1300, -120],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_ME",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## AI Customer Support Agent\n\n**Setup:**\n1. Add your OpenAI credential in the OpenAI Chat Model node.\n2. Edit the System Message in the 'AI Support Agent' node with your company details.\n3. Add your Gmail credential in the 'Alert Team (Gmail)' node and set the support team email.\n4. Activate the workflow.\n\n**Flow:**\nWebhook → AI Agent → Check Handoff → Send Reply\n                                    ↓\n                             Needs Human? (IF)\n                            /              \\\n                     Yes (true)          No (false)\n                         ↓                  ↓\n               Alert Team (Gmail)      (no action)\n\n**Test (curl):**\ncurl -X POST <WEBHOOK_URL> -H 'Content-Type: application/json' -d '{\"sessionId\":\"u1\",\"message\":\"How long does delivery take?\"}'\n\n**Handoff test:**\ncurl -X POST <WEBHOOK_URL> -H 'Content-Type: application/json' -d '{\"sessionId\":\"u2\",\"message\":\"I want a refund now!\"}'",
+        "height": 380,
+        "width": 480
       },
       "id": "a1b2c3d4-0007-4000-8000-000000000007",
       "name": "Notes",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [
-        0,
-        -360
-      ]
+      "position": [0, -420]
     }
   ],
   "connections": {
@@ -190,6 +230,29 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Send Reply": {
+      "main": [
+        [
+          {
+            "node": "Needs Human?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Human?": {
+      "main": [
+        [
+          {
+            "node": "Alert Team (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
